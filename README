@@ -1,0 +1,9 @@
+1.generate Makefile
+  cd build
+  cmake ..
+
+2.generate executable program
+  cd build
+  make
+  then will generate executable program EXEC_SAMPLE_MPP in directory bin(../bin)
+

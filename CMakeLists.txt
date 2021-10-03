@@ -1,0 +1,32 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+SET(CMAKE_SYSTEM_NAME Linux)
+
+SET(CMAKE_SYSTEM_PROCESSOR arm)
+
+SET(TOOLCHAIN_DIR /opt/hisi-linux/x86-arm/arm-hisiv500-linux)
+
+SET(CMAKE_C_COMPILER /opt/hisi-linux/x86-arm/arm-hisiv500-linux/bin/arm-hisiv500-linux-uclibcgnueabi-gcc)
+SET(CMAKE_CXX_COMPILER /opt/hisi-linux/x86-arm/arm-hisiv500-linux/bin/arm-hisiv500-linux-uclibcgnueabi-g++)
+
+SET(CMAKE_FIND_ROOT_PATH  ${TOOLCHAIN_DIR}
+ ${TOOLCHAIN_DIR}/arm-hisiv500-linux-uclibcgnueabi/include
+ ${TOOLCHAIN_DIR}/arm-hisiv500-linux-uclibcgnueabi/lib )
+
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+
+SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+SET(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+PROJECT(Hi3531DV100_MPP_SAMPLE)
+
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall -g -DAI_DEV=1 -DAO_DEV=0 -DHI_ACODEC_TYPE_NVP6134 -DHI_ACODEC_TYPE_HDMI")
+
+INCLUDE_DIRECTORIES(include)
+
+add_subdirectory(src)
+
+
