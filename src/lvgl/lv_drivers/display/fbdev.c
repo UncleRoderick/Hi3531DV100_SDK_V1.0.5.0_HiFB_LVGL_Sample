@@ -83,9 +83,132 @@ static int fbfd = 0;
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+#if PLATFORM_HISILICON
+#include "hi_type.h"
+#include "hifb.h"
+
+static struct fb_bitfield s_a32 = {24,8,0};
+static struct fb_bitfield s_r32 = {16,8,0};
+static struct fb_bitfield s_g32 = {8,8,0};
+static struct fb_bitfield s_b32 = {0,8,0};
+
+#define HIFB_WIDTH                  1920
+#define HIFB_HEIGHT                 1080
+
+int HIFB_Init(void)
+{
+    HI_S32 i,x,y,s32Ret;
+    HI_U32 u32FixScreenStride = 0;
+    HIFB_ALPHA_S stAlpha={0};
+    HIFB_POINT_S stPoint = {40, 112};
+
+    HI_BOOL bShow;
+
+    /* 1. open framebuffer device overlay 0 */
+    fbfd = open(FBDEV_PATH, O_RDWR, 0);
+    if(fbfd < 0)
+    {
+        perror("hifbfd open failed!\n");
+        return HI_FAILURE;
+    }
+
+    bShow = HI_FALSE;
+    if(ioctl(fbfd, FBIOPUT_SHOW_HIFB, &bShow) < 0)
+    {
+        perror("FBIOPUT_SHOW_HIFB failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+	
+    /* 2. set the screen original position */
+	stPoint.s32XPos = 0;
+    stPoint.s32YPos = 0;
+
+    if(ioctl(fbfd, FBIOPUT_SCREEN_ORIGIN_HIFB, &stPoint) < 0)
+    {
+        perror("set screen original show position failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+
+    /* 3. get the variable screen info */
+    if(ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo) < 0)
+    {
+        perror("Get variable screen info failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+
+    /* 4. modify the variable screen info
+          the screen size: IMAGE_WIDTH*IMAGE_HEIGHT
+          the virtual screen size: VIR_SCREEN_WIDTH*VIR_SCREEN_HEIGHT
+          (which equals to VIR_SCREEN_WIDTH*(IMAGE_HEIGHT*2))
+          the pixel format: ARGB1555
+    */
+    usleep(40*1000);
+
+    vinfo.xres_virtual = HIFB_WIDTH;
+    vinfo.yres_virtual = HIFB_HEIGHT*2;
+    vinfo.xres = HIFB_WIDTH;
+    vinfo.yres = HIFB_HEIGHT;
+ 
+	vinfo.transp= s_a32;
+    vinfo.red = s_r32;
+    vinfo.green = s_g32;
+    vinfo.blue = s_b32;
+    vinfo.bits_per_pixel = 32;
+    vinfo.activate = FB_ACTIVATE_NOW;
+
+    /* 5. set the variable screeninfo */
+    if(ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo) < 0)
+    {
+        perror("Put variable screen info failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+
+    /* 6. get the fix screen info */
+    if(ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo) < 0)
+    {
+        perror("Get fix screen info failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+	
+    u32FixScreenStride = finfo.line_length;   /*fix screen stride*/
+	screensize =  finfo.smem_len;
+
+    /* 7. map the physical video memory for user use */
+    fbp = mmap(HI_NULL, screensize, PROT_READ|PROT_WRITE, MAP_SHARED, fbfd, 0);
+    if(MAP_FAILED == fbp)
+    {
+        perror("mmap framebuffer failed!\n");
+		close(fbfd);
+        return HI_FAILURE;
+    }
+
+    memset(fbp, 0x00, screensize);
+
+    /* time to play*/
+    bShow = HI_TRUE;
+    if(ioctl(fbfd, FBIOPUT_SHOW_HIFB, &bShow) < 0)
+    {
+        perror("FBIOPUT_SHOW_HIFB failed!\n");
+        munmap(fbp, screensize);
+        close(fbfd);
+        return HI_FAILURE;
+    }
+
+    return 0;
+}
+#endif
+
 
 void fbdev_init(void)
 {
+#if PLATFORM_HISILICON
+	HIFB_Init();
+#else
     // Open the file for reading and writing
     fbfd = open(FBDEV_PATH, O_RDWR);
     if(fbfd == -1) {
@@ -97,7 +220,7 @@ void fbdev_init(void)
     // Make sure that the display is on.
     if (ioctl(fbfd, FBIOBLANK, FB_BLANK_UNBLANK) != 0) {
         perror("ioctl(FBIOBLANK)");
-        //return;
+        return;
     }
 
 #if USE_BSD_FBDEV
@@ -152,11 +275,22 @@ void fbdev_init(void)
     memset(fbp, 0, screensize);
 
     LV_LOG_INFO("The framebuffer device was mapped to memory successfully");
-
+#endif
 }
 
 void fbdev_exit(void)
 {
+#if PLATFORM_HISILICON
+    /* unmap the physical memory */
+    munmap(fbp, screensize);
+
+	HI_BOOL bShow;
+	bShow = HI_FALSE;
+	if (ioctl(fbfd, FBIOPUT_SHOW_HIFB, &bShow) < 0)
+	{
+		perror("FBIOPUT_SHOW_HIFB failed!\n");
+	}
+#endif
     close(fbfd);
 }
 

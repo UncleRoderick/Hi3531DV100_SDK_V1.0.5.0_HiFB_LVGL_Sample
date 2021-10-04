@@ -14,6 +14,8 @@
 
 #include "lv_conf.h"
 
+#define PLATFORM_HISILICON         1
+
 /*********************
  * DELAY INTERFACE
  *********************/
