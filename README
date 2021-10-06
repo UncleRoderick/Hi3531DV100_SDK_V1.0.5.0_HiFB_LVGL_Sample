@@ -1,4 +1,5 @@
 1.generate Makefile
+  mkdir build
   cd build
   cmake ..
 
